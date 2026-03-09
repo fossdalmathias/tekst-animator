@@ -857,8 +857,19 @@ function closeExportModal(){
   if(ov)ov.remove();
 }
 
+// Commit Web Animations API state to inline styles so html2canvas can read them
+function commitAnimStyles(){
+  document.querySelectorAll('#stage .w, #stage .w > span').forEach(el=>{
+    const cs=getComputedStyle(el);
+    el.style.opacity=cs.opacity;
+    el.style.transform=cs.transform;
+    el.style.filter=cs.filter;
+  });
+}
+
 // Properly await html2canvas frame capture
 async function captureFrame(ctx,W,H,isAlpha){
+  commitAnimStyles();
   const filmEl=document.querySelector('.film');
   const c=await html2canvas(filmEl,{
     backgroundColor:isAlpha?null:undefined,
@@ -898,6 +909,9 @@ async function startExport(){
 
   const savedI=curI;
   const idleEl=document.getElementById('idle');idleEl.classList.add('gone');
+  // Hide UI elements that should not appear in export
+  prog.style.display='none';
+  ctr.style.display='none';
 
   // Determine scene range
   const startScene=exportScope==='current'?curI:0;
@@ -966,6 +980,8 @@ async function startExport(){
   // Restore state
   stage.style.background='';
   document.querySelector('.film').style.background='';
+  prog.style.display='';
+  ctr.style.display='';
   curI=savedI;drawStatic(savedI);renderSB();
 
   // Build file
