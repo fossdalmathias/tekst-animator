@@ -934,42 +934,59 @@ async function startExport(){
     const toks=tokenize(sc.text);
     const els=sc.split?buildSplit(toks,sc):buildCentered(toks,sc);
 
-    // Entrance animation — capture frames at 25fps
-    await new Promise(async resolve=>{
-      const fn=ENTER[sc.enter]||ENTER.gentle;
-      const spd=sc.enterSpeed||1;
-      const ms=fn(els,sc.fw,spd);
-      const frames=Math.max(Math.ceil(ms/40),2);
-      for(let f=0;f<frames;f++){
-        await new Promise(r=>setTimeout(r,40));
-        await captureFrame(ctx,W,H,isAlpha);
-      }
-      resolve();
-    });
+    // ── Entrance: pause animations and step through time ──
+    const enterFn=ENTER[sc.enter]||ENTER.gentle;
+    const spd=sc.enterSpeed||1;
+    const enterMs=enterFn(els,sc.fw,spd);
+    await new Promise(r=>requestAnimationFrame(()=>r()));
+    const enterAnims=stage.getAnimations({subtree:true});
+    enterAnims.forEach(a=>a.pause());
+    const enterFrames=Math.max(Math.ceil(enterMs/40),2);
+    for(let f=0;f<enterFrames;f++){
+      const t=((f+1)/enterFrames)*enterMs;
+      enterAnims.forEach(a=>{try{a.currentTime=t}catch(e){}});
+      commitAnimStyles();
+      await captureFrame(ctx,W,H,isAlpha);
+    }
+    commitAnimStyles();
+    enterAnims.forEach(a=>{try{a.cancel()}catch(e){}});
 
-    // Hold phase
+    // ── Hold: ensure visible, step through hold animation ──
+    els.forEach(({el})=>{el.style.opacity='1';el.style.transform='none';el.style.filter='none'});
     const holdMs=sc.hold*1000;
     const holdFn=HOLD[sc.hold_anim||'none']||HOLD.none;
     holdFn(els,holdMs);
+    await new Promise(r=>requestAnimationFrame(()=>r()));
+    const hAnims=stage.getAnimations({subtree:true});
+    hAnims.forEach(a=>a.pause());
     const holdFrames=Math.max(Math.ceil(holdMs/40),1);
     for(let f=0;f<holdFrames;f++){
-      await new Promise(r=>setTimeout(r,40));
+      const t=((f+1)/holdFrames)*holdMs;
+      hAnims.forEach(a=>{try{a.currentTime=t}catch(e){}});
+      commitAnimStyles();
       await captureFrame(ctx,W,H,isAlpha);
     }
+    commitAnimStyles();
+    hAnims.forEach(a=>{try{a.cancel()}catch(e){}});
     stopHold();
 
-    // Exit animation
-    await new Promise(async resolve=>{
-      const fn=EXIT[sc.exit]||EXIT.fade;
-      const targets=els.map(e=>e.el);
-      const ms=fn(targets);
-      const frames=Math.max(Math.ceil(ms/40),2);
-      for(let f=0;f<frames;f++){
-        await new Promise(r=>setTimeout(r,40));
-        await captureFrame(ctx,W,H,isAlpha);
-      }
-      resolve();
-    });
+    // ── Exit: pause and step through exit animation ──
+    els.forEach(({el})=>{el.style.opacity='1';el.style.transform='none';el.style.filter='none'});
+    const exitFn=EXIT[sc.exit]||EXIT.fade;
+    const targets=els.map(e=>e.el);
+    const exitMs=exitFn(targets);
+    await new Promise(r=>requestAnimationFrame(()=>r()));
+    const exitAnims=stage.getAnimations({subtree:true});
+    exitAnims.forEach(a=>a.pause());
+    const exitFrames=Math.max(Math.ceil(exitMs/40),2);
+    for(let f=0;f<exitFrames;f++){
+      const t=((f+1)/exitFrames)*exitMs;
+      exitAnims.forEach(a=>{try{a.currentTime=t}catch(e){}});
+      commitAnimStyles();
+      await captureFrame(ctx,W,H,isAlpha);
+    }
+    commitAnimStyles();
+    exitAnims.forEach(a=>{try{a.cancel()}catch(e){}});
 
     fill.style.width=`${((scIdx+1)/totalScenes)*100}%`;
   }
