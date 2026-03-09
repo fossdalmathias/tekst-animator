@@ -289,14 +289,78 @@ const ENTER = {
     return al.length*ms+Math.round(120/spd)},
   fadeUp(els){let m=0;els.forEach(({el},i)=>{el.animate([{opacity:0,transform:'translateY(30px)',filter:'blur(2px)'},{opacity:1,transform:'translateY(0)',filter:'blur(0)'}],{duration:400,delay:i*90,easing:SILK,fill:'both'});m=Math.max(m,i*90+400)});return m},
   fall(els){let m=0;els.forEach(({el},i)=>{el.animate([{opacity:0,transform:'translateY(-120px) rotate(-8deg)',filter:'blur(3px)'},{opacity:1,transform:'translateY(6px) rotate(1deg)',filter:'blur(0)'},{opacity:1,transform:'translateY(-2px) rotate(0deg)'},{opacity:1,transform:'translateY(0) rotate(0deg)'}],{duration:550,delay:i*110,easing:'cubic-bezier(0.34,1.56,0.64,1)',fill:'both'});m=Math.max(m,i*110+550)});return m},
-  matrix(els){
-    const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*';const dur=500;
-    els.forEach(({el},i)=>{el.style.opacity='1';const orig=el.textContent;const letters=[...orig];
-      let fr=0;const iv=setInterval(()=>{el.textContent=letters.map((c,ci)=>fr>ci*2?c:chars[Math.floor(Math.random()*chars.length)]).join('');fr++;if(fr>letters.length*3)clearInterval(iv)},50);
-      el.animate([{opacity:0,filter:'blur(4px)',transform:'scale(1.1)'},{opacity:1,filter:'blur(0)',transform:'scale(1)'}],{duration:dur,delay:i*80,easing:SNAP,fill:'both'})});
-    return els.length*80+dur},
-  typebeat(els){let m=0;const groups=[];for(let i=0;i<els.length;i+=2){groups.push(els.slice(i,i+2))}
-    groups.forEach((grp,gi)=>{const d=gi*200;grp.forEach(({el},wi)=>{el.animate([{opacity:0,transform:'scale(0.8) translateY(8px)'},{opacity:1,transform:'scale(1.04) translateY(-2px)'},{opacity:1,transform:'scale(1) translateY(0)'}],{duration:250,delay:d+wi*50,easing:SNAP,fill:'both'});m=Math.max(m,d+wi*50+250)})});return m},
+  matrix(els,fw,spd=1){
+    const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*';const dur=Math.round(500/spd);const ivMs=Math.round(50/spd);const del=Math.round(80/spd);
+    els.forEach(({el},i)=>{el.style.opacity='1';const orig=el.textContent;const letters=[...orig];const col=el.style.color||'';
+      let fr=0;const iv=setInterval(()=>{el.textContent=letters.map((c,ci)=>fr>ci*2?c:chars[Math.floor(Math.random()*chars.length)]).join('');if(col)el.style.color=col;fr++;if(fr>letters.length*3)clearInterval(iv)},ivMs);
+      el.animate([{opacity:0,filter:'blur(4px)',transform:'scale(1.1)'},{opacity:1,filter:'blur(0)',transform:'scale(1)'}],{duration:dur,delay:i*del,easing:SNAP,fill:'both'})});
+    return els.length*del+dur},
+  typebeat(els,fw,spd=1){let m=0;const groups=[];for(let i=0;i<els.length;i+=2){groups.push(els.slice(i,i+2))}
+    const gd=Math.round(200/spd);const wd=Math.round(50/spd);const d2=Math.round(250/spd);
+    groups.forEach((grp,gi)=>{const d=gi*gd;grp.forEach(({el},wi)=>{el.animate([{opacity:0,transform:'scale(0.8) translateY(8px)'},{opacity:1,transform:'scale(1.04) translateY(-2px)'},{opacity:1,transform:'scale(1) translateY(0)'}],{duration:d2,delay:d+wi*wd,easing:SNAP,fill:'both'});m=Math.max(m,d+wi*wd+d2)})});return m},
+  // ── NEW v3: Matrix-inspired + chaos ──
+  decode(els,fw,spd=1){
+    // Like matrix but chars rain from top, green tint
+    const chars='01アイウエオカキクケコ';const dur=Math.round(600/spd);const del=Math.round(60/spd);const ivMs=Math.round(40/spd);
+    els.forEach(({el},i)=>{el.style.opacity='1';const orig=el.textContent;const letters=[...orig];const col=el.style.color||'';
+      let fr=0;const iv=setInterval(()=>{el.textContent=letters.map((c,ci)=>fr>ci*3?c:chars[Math.floor(Math.random()*chars.length)]).join('');if(col)el.style.color=col;fr++;if(fr>letters.length*4){clearInterval(iv);el.textContent=orig;if(col)el.style.color=col}},ivMs);
+      el.animate([{opacity:0,transform:'translateY(-30px)',filter:'blur(6px) brightness(2)'},{opacity:1,transform:'translateY(3px)',filter:'blur(0) brightness(1.2)'},{opacity:1,transform:'translateY(0)',filter:'blur(0) brightness(1)'}],{duration:dur,delay:i*del,easing:SNAP,fill:'both'})});
+    return els.length*del+dur},
+  scramble(els,fw,spd=1){
+    // Each letter scrambles independently with different timing
+    const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';const dur=Math.round(700/spd);const ivMs=Math.round(35/spd);
+    const al=[];
+    els.forEach(({el})=>{el.style.opacity='1';const orig=el.textContent;const col=el.style.color||'';
+      const spans=[...orig].map(ch=>{const s=document.createElement('span');s.style.cssText='display:inline-block;';if(col)s.style.color=col;s.textContent=ch;s._orig=ch;return s});
+      el.textContent='';spans.forEach(s=>el.appendChild(s));al.push(...spans);
+      const sp=document.createElement('span');sp.style.cssText='display:inline-block;width:.28em;';el.appendChild(sp);
+    });
+    al.forEach((s,i)=>{
+      const delay=Math.round((Math.random()*400)/spd);const reps=3+Math.floor(Math.random()*6);let fr=0;
+      setTimeout(()=>{const iv=setInterval(()=>{s.textContent=fr>=reps?s._orig:chars[Math.floor(Math.random()*chars.length)];fr++;if(fr>reps)clearInterval(iv)},ivMs)},delay);
+      s.animate([{opacity:0,transform:'scale(0.5)'},{opacity:1,transform:'scale(1.05)'},{opacity:1,transform:'scale(1)'}],{duration:Math.round(300/spd),delay,easing:SNAP,fill:'both'});
+    });
+    return dur},
+  glitchIn(els,fw,spd=1){
+    // Glitchy digital appearance with RGB split effect
+    const dur=Math.round(400/spd);const del=Math.round(70/spd);
+    let m=0;els.forEach(({el},i)=>{
+      const d=i*del;
+      el.animate([
+        {opacity:0,transform:'translateX(15px) skewX(30deg)',filter:'blur(4px)'},
+        {opacity:1,transform:'translateX(-8px) skewX(-15deg)',filter:'blur(2px)'},
+        {opacity:0.6,transform:'translateX(4px) skewX(8deg)',filter:'blur(0)'},
+        {opacity:1,transform:'translateX(-2px) skewX(-3deg)',filter:'blur(0)'},
+        {opacity:1,transform:'none',filter:'blur(0)'}
+      ],{duration:dur,delay:d,easing:'linear',fill:'both'});
+      m=Math.max(m,d+dur)});return m},
+  hackType(els,fw,spd=1){
+    // Terminal hacker typing — cursor blink + green text feel
+    const ms=Math.round(45/spd);const al=[];
+    els.forEach(({el})=>{el.style.opacity='1';const t=el.textContent;const col=el.style.color||'';el.textContent='';
+      [...t].forEach(ch=>{const l=document.createElement('span');l.style.cssText='display:inline-block;opacity:0;';if(col)l.style.color=col;l.textContent=ch;el.appendChild(l);al.push(l)});
+      const sp=document.createElement('span');sp.style.cssText='display:inline-block;width:.28em;opacity:1;';el.appendChild(sp)});
+    al.forEach((l,i)=>l.animate([
+      {opacity:0,transform:'translateY(0)',filter:'brightness(3)'},
+      {opacity:1,transform:'translateY(0)',filter:'brightness(2)'},
+      {opacity:1,transform:'translateY(0)',filter:'brightness(1)'}
+    ],{duration:Math.round(80/spd),delay:i*ms,easing:'steps(1)',fill:'both'}));
+    return al.length*ms+Math.round(80/spd)},
+  chaos(els,fw,spd=1){
+    // Words appear at random positions, then animate to correct place
+    const W=stage.offsetWidth,H=stage.offsetHeight;
+    const dur=Math.round(900/spd);const scatterDur=Math.round(300/spd);const settleDur=Math.round(600/spd);
+    // First make all visible at random positions
+    els.forEach(({el})=>{
+      const rx=(Math.random()-.5)*W*0.7;const ry=(Math.random()-.5)*H*0.6;const rr=(Math.random()-.5)*40;const rs=0.6+Math.random()*0.8;
+      el.animate([
+        {opacity:0,transform:`translate(${rx}px,${ry}px) rotate(${rr}deg) scale(${rs})`,filter:'blur(2px)'},
+        {opacity:1,transform:`translate(${rx}px,${ry}px) rotate(${rr}deg) scale(${rs})`,filter:'blur(0)'},
+        {opacity:1,transform:`translate(${rx*0.3}px,${ry*0.3}px) rotate(${rr*0.2}deg) scale(1)`,filter:'blur(0)'},
+        {opacity:1,transform:'translate(0,0) rotate(0deg) scale(1)',filter:'blur(0)'}
+      ],{duration:dur,delay:Math.round(Math.random()*100/spd),easing:SNAP,fill:'both'});
+    });
+    return dur+Math.round(100/spd)},
 };
 
 // ═══════════════════════════════════════════════════════
@@ -538,7 +602,7 @@ function renderTL(){const tl=document.getElementById('tl');tl.innerHTML='';scene
 // ═══════════════════════════════════════════════════════
 //  SIDEBAR  —  collapsible cards, full options
 // ═══════════════════════════════════════════════════════
-const ENTERS=['gentle','together','typewriter','assemble','rise','zoom','flip','wave','elastic','blur','cascade','slam','glitch','spiral','cut','bounce','reveal','swing','drop','expand','slideIn','spell','fadeUp','fall','matrix','typebeat'];
+const ENTERS=['gentle','together','typewriter','assemble','rise','zoom','flip','wave','elastic','blur','cascade','slam','glitch','spiral','cut','bounce','reveal','swing','drop','expand','slideIn','spell','fadeUp','fall','matrix','typebeat','decode','scramble','glitchIn','hackType','chaos'];
 const EXITS=['fade','lift','sink','scatter','blurout','zoom','collapse','slide','flip','glitch','cut','pop','shrink','sweep','dropOut'];
 const HOLDS=['none','float','breathe','wave','pulse','sway','jitter','glow','rotate','bounce'];
 const WEIGHTS=['300','400','500','700','800','900'];
@@ -731,12 +795,25 @@ renderSB();setTimeout(()=>drawStatic(0),60);
 //  EXPORT
 // ═══════════════════════════════════════════════════════
 let exportMode='webm'; // 'mp4', 'webm', 'alpha'
+let exportScope='all'; // 'all' or 'current'
 
 function showExportModal(){
   if(document.querySelector('.export-overlay'))return;
   const ov=document.createElement('div');ov.className='export-overlay';
   ov.innerHTML=`<div class="export-modal">
     <h3>Eksporter video</h3>
+    <div style="font-size:11px;color:var(--um);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Omfang</div>
+    <div class="export-opts" style="margin-bottom:12px">
+      <div class="export-opt${exportScope==='all'?' active':''}" onclick="setExportScope('all',this)">
+        <div class="export-opt-icon">📼</div>
+        <div class="export-opt-info"><div class="export-opt-title">Alle scener</div><div class="export-opt-desc">Eksporter hele filmen fra scene 1 til ${scenes.length}</div></div>
+      </div>
+      <div class="export-opt${exportScope==='current'?' active':''}" onclick="setExportScope('current',this)">
+        <div class="export-opt-icon">🎞️</div>
+        <div class="export-opt-info"><div class="export-opt-title">Kun denne scenen</div><div class="export-opt-desc">Eksporter kun scene ${curI+1}: "${scenes[curI].text.replace(/~\w+/g,'').slice(0,20)}"</div></div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--um);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Format</div>
     <div class="export-opts">
       <div class="export-opt${exportMode==='mp4'?' active':''}" onclick="setExportMode('mp4',this)">
         <div class="export-opt-icon">🎬</div>
@@ -766,13 +843,31 @@ function showExportModal(){
 
 function setExportMode(mode,el){
   exportMode=mode;
-  document.querySelectorAll('.export-opt').forEach(o=>o.classList.remove('active'));
+  el.closest('.export-opts').querySelectorAll('.export-opt').forEach(o=>o.classList.remove('active'));
+  el.classList.add('active');
+}
+function setExportScope(scope,el){
+  exportScope=scope;
+  el.closest('.export-opts').querySelectorAll('.export-opt').forEach(o=>o.classList.remove('active'));
   el.classList.add('active');
 }
 
 function closeExportModal(){
   const ov=document.querySelector('.export-overlay');
   if(ov)ov.remove();
+}
+
+// Properly await html2canvas frame capture
+async function captureFrame(ctx,W,H,isAlpha){
+  const filmEl=document.querySelector('.film');
+  const c=await html2canvas(filmEl,{
+    backgroundColor:isAlpha?null:undefined,
+    scale:W/filmEl.offsetWidth,
+    useCORS:true,
+    logging:false
+  });
+  ctx.clearRect(0,0,W,H);
+  ctx.drawImage(c,0,0,W,H);
 }
 
 async function startExport(){
@@ -785,7 +880,6 @@ async function startExport(){
   const isAlpha=exportMode==='alpha';
   const W=1920,H=1080;
 
-  // Create offscreen canvas
   const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext('2d');
 
@@ -794,29 +888,29 @@ async function startExport(){
   if(exportMode==='mp4'){
     if(MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')){mimeType='video/mp4;codecs=avc1'}
     else if(MediaRecorder.isTypeSupported('video/mp4')){mimeType='video/mp4'}
-    else{mimeType='video/webm;codecs=vp9'} // fallback
+    else{mimeType='video/webm;codecs=vp9'}
   }
 
   const stream=canvas.captureStream(25);
-  const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:8000000});
+  const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:25000000}); // 25Mbps for high quality
   const chunks=[];
   recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data)};
 
-  // Save original stage styles
-  const origBg=stage.style.background;
-  const origBR=document.querySelector('.film').style.borderRadius;
-
-  recorder.start();
-
-  // Play through all scenes and capture frames
-  const totalScenes=scenes.length;
   const savedI=curI;
   const idleEl=document.getElementById('idle');idleEl.classList.add('gone');
 
-  for(let si=0;si<totalScenes;si++){
+  // Determine scene range
+  const startScene=exportScope==='current'?curI:0;
+  const endScene=exportScope==='current'?curI+1:scenes.length;
+  const totalScenes=endScene-startScene;
+
+  recorder.start(100); // collect data every 100ms
+
+  for(let si=startScene;si<endScene;si++){
     curI=si;
-    status.textContent=`Scene ${si+1} / ${totalScenes}`;
-    fill.style.width=`${((si)/totalScenes)*100}%`;
+    const scIdx=si-startScene;
+    status.textContent=`Scene ${scIdx+1} / ${totalScenes}`;
+    fill.style.width=`${(scIdx/totalScenes)*100}%`;
 
     clearStage();
     const sc=scenes[si];
@@ -826,70 +920,76 @@ async function startExport(){
     const toks=tokenize(sc.text);
     const els=sc.split?buildSplit(toks,sc):buildCentered(toks,sc);
 
-    // Animate entrance
-    await new Promise(resolve=>{
+    // Entrance animation — capture frames at 25fps
+    await new Promise(async resolve=>{
       const fn=ENTER[sc.enter]||ENTER.gentle;
       const spd=sc.enterSpeed||1;
       const ms=fn(els,sc.fw,spd);
-      // Capture frames during entrance
-      const frameIv=setInterval(()=>captureFrame(ctx,W,H,isAlpha),40);
-      setTimeout(()=>{clearInterval(frameIv);captureFrame(ctx,W,H,isAlpha);resolve()},ms);
+      const frames=Math.max(Math.ceil(ms/40),2);
+      for(let f=0;f<frames;f++){
+        await new Promise(r=>setTimeout(r,40));
+        await captureFrame(ctx,W,H,isAlpha);
+      }
+      resolve();
     });
 
-    // Hold phase: capture frames
+    // Hold phase
     const holdMs=sc.hold*1000;
     const holdFn=HOLD[sc.hold_anim||'none']||HOLD.none;
     holdFn(els,holdMs);
-    await new Promise(resolve=>{
-      const frameIv=setInterval(()=>captureFrame(ctx,W,H,isAlpha),40);
-      setTimeout(()=>{clearInterval(frameIv);stopHold();resolve()},holdMs);
-    });
+    const holdFrames=Math.max(Math.ceil(holdMs/40),1);
+    for(let f=0;f<holdFrames;f++){
+      await new Promise(r=>setTimeout(r,40));
+      await captureFrame(ctx,W,H,isAlpha);
+    }
+    stopHold();
 
     // Exit animation
-    await new Promise(resolve=>{
+    await new Promise(async resolve=>{
       const fn=EXIT[sc.exit]||EXIT.fade;
       const targets=els.map(e=>e.el);
       const ms=fn(targets);
-      const frameIv=setInterval(()=>captureFrame(ctx,W,H,isAlpha),40);
-      setTimeout(()=>{clearInterval(frameIv);captureFrame(ctx,W,H,isAlpha);resolve()},ms);
+      const frames=Math.max(Math.ceil(ms/40),2);
+      for(let f=0;f<frames;f++){
+        await new Promise(r=>setTimeout(r,40));
+        await captureFrame(ctx,W,H,isAlpha);
+      }
+      resolve();
     });
 
-    fill.style.width=`${((si+1)/totalScenes)*100}%`;
+    fill.style.width=`${((scIdx+1)/totalScenes)*100}%`;
   }
 
-  // Stop recording
   recorder.stop();
   await new Promise(resolve=>{recorder.onstop=resolve});
 
-  // Restore
-  stage.style.background=origBg;
+  // Restore state
+  stage.style.background='';
   document.querySelector('.film').style.background='';
   curI=savedI;drawStatic(savedI);renderSB();
 
-  // Download
+  // Build file
   const ext=mimeType.startsWith('video/mp4')?'mp4':'webm';
   const blob=new Blob(chunks,{type:mimeType});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`kinetic-film${isAlpha?'-alpha':''}.${ext}`;
-  a.click();URL.revokeObjectURL(url);
+  const fname=`kinetic-film${isAlpha?'-alpha':''}${exportScope==='current'?'-scene'+(curI+1):''}.${ext}`;
 
-  status.textContent='Ferdig! Filen er lastet ned.';
+  // Try native save dialog, fallback to direct download
+  try{
+    if(window.showSaveFilePicker){
+      const handle=await window.showSaveFilePicker({suggestedName:fname,types:[{description:ext.toUpperCase()+' Video',accept:{[mimeType]:'.'+ext}}]});
+      const writable=await handle.createWritable();
+      await writable.write(blob);await writable.close();
+      status.textContent='Ferdig! Filen er lagret.';
+    } else { throw 'no picker'; }
+  } catch(e){
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=fname;a.click();
+    URL.revokeObjectURL(url);
+    status.textContent='Ferdig! Filen er lastet ned.';
+  }
+
   goBtn.textContent='Ferdig';
-  setTimeout(closeExportModal,1500);
-}
-
-function captureFrame(ctx,W,H,isAlpha){
-  const filmEl=document.querySelector('.film');
-  html2canvas(filmEl,{
-    backgroundColor:isAlpha?null:undefined,
-    scale:W/filmEl.offsetWidth,
-    useCORS:true,
-    logging:false
-  }).then(c=>{
-    ctx.clearRect(0,0,W,H);
-    ctx.drawImage(c,0,0,W,H);
-  });
+  setTimeout(closeExportModal,2000);
 }
 </script>
 </body>
