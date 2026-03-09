@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kinetic Film</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--cream:#F0EBE1;--ink:#1a1a18;--ui:#faf8f4;--ub:#e4dfd6;--ut:#46433d;--um:#9e9892;
@@ -76,11 +77,50 @@ body{background:#d8d3c8;font-family:'DM Sans',sans-serif;height:100vh;display:fl
 .bg-custom::-webkit-color-swatch-wrapper{padding:0}
 .bg-custom::-webkit-color-swatch{border:none;border-radius:50%}
 
+/* word color chips */
+.word-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.word-chip{font-size:11px;padding:3px 7px;border-radius:5px;background:var(--ui);border:1px solid var(--ub);cursor:pointer;font-family:inherit;color:var(--ut);transition:all .12s;position:relative}
+.word-chip:hover{background:var(--ub)}
+.word-chip.chip-sel{border-color:var(--ink);box-shadow:0 0 0 1.5px var(--ink)}
+.word-chip .chip-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px;vertical-align:middle;border:1px solid rgba(0,0,0,.15)}
+.color-pick-row{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:6px;padding:6px 0;border-top:1px solid var(--ub)}
+.cpick{width:20px;height:20px;border-radius:50%;border:2px solid var(--ub);cursor:pointer;transition:all .12s}
+.cpick:hover{transform:scale(1.15)}
+.cpick.s{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink)}
+.cpick-x{font-size:9px;padding:2px 6px;border-radius:100px;border:1px solid var(--ub);background:var(--ui);color:var(--um);cursor:pointer;font-family:inherit}
+.cpick-x:hover{background:#fff0f0;color:#c44;border-color:#eedede}
+.cpick-custom{width:20px;height:20px;border:2px solid var(--ub);padding:0;border-radius:50%;cursor:pointer;overflow:hidden;background:none;-webkit-appearance:none;appearance:none}
+.cpick-custom::-webkit-color-swatch-wrapper{padding:0}
+.cpick-custom::-webkit-color-swatch{border:none;border-radius:50%}
+
 /* scene actions */
 .sdel{align-self:flex-start;background:none;border:1px solid #eedede;border-radius:6px;padding:4px 10px;font-size:10.5px;color:#c44;cursor:pointer;font-family:inherit}
 .sdel:hover{background:#fff0f0}
 .addbtn{background:none;border:1.5px dashed var(--ub);border-radius:9px;padding:9px;font-size:11.5px;color:var(--um);cursor:pointer;font-family:inherit;text-align:center;transition:all .15s}
 .addbtn:hover{border-color:#aaa;color:var(--ut)}
+
+/* ── EXPORT MODAL ── */
+.export-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.export-modal{background:#fff;border-radius:14px;padding:28px 32px;width:420px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.export-modal h3{font-size:16px;font-weight:600;color:var(--ink);margin-bottom:16px}
+.export-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.export-opt{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--ub);border-radius:9px;cursor:pointer;transition:all .12s;background:var(--ui)}
+.export-opt:hover{border-color:#aaa;background:#fff}
+.export-opt.active{border-color:var(--ink);background:#fff}
+.export-opt-icon{font-size:20px}
+.export-opt-info{flex:1}
+.export-opt-title{font-size:13px;font-weight:600;color:var(--ink)}
+.export-opt-desc{font-size:10.5px;color:var(--um);margin-top:1px}
+.export-btns{display:flex;gap:8px;justify-content:flex-end}
+.export-btns button{padding:8px 18px;border-radius:8px;font-size:12.5px;font-family:inherit;cursor:pointer;border:1px solid var(--ub);background:var(--ui);color:var(--ut);transition:all .12s}
+.export-btns button:hover{background:var(--ub)}
+.export-btns .export-go{background:var(--ink);color:#fff;border-color:var(--ink)}
+.export-btns .export-go:hover{background:#2c2c28}
+.export-btns .export-go:disabled{opacity:.5;cursor:not-allowed}
+.export-progress{margin-top:14px}
+.export-progress-bar{height:4px;background:var(--ub);border-radius:2px;overflow:hidden}
+.export-progress-fill{height:100%;background:var(--ink);border-radius:2px;transition:width .1s linear;width:0%}
+.export-status{font-size:10.5px;color:var(--um);margin-top:6px;text-align:center}
 
 /* ── CANVAS ── */
 .cw{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:12px}
@@ -157,6 +197,7 @@ body{background:#d8d3c8;font-family:'DM Sans',sans-serif;height:100vh;display:fl
   </select>
   <div class="tsep"></div>
   <button class="tbtn pri" onclick="playAll()">&#9654; Spill av</button>
+  <button class="tbtn" onclick="showExportModal()">&#x2B07; Eksporter</button>
 </div>
 
 <div class="main">
@@ -238,6 +279,24 @@ const ENTER = {
   drop(els){let m=0;els.forEach(({el},i)=>{el.animate([{opacity:0,transform:'translateY(-80px) scale(0.8)'},{opacity:1,transform:'translateY(5px) scale(1.02)'},{opacity:1,transform:'translateY(0) scale(1)'}],{duration:400,delay:i*100,easing:SNAP,fill:'both'});m=Math.max(m,i*100+400)});return m},
   expand(els){let m=0;els.forEach(({el},i)=>{el.animate([{opacity:0,transform:'scaleY(0.2) scaleX(1.3)',filter:'blur(2px)'},{opacity:1,transform:'scaleY(1.05) scaleX(.98)',filter:'blur(0)'},{opacity:1,transform:'scale(1)'}],{duration:400,delay:i*70,easing:BACK,fill:'both'});m=Math.max(m,i*70+400)});return m},
   slideIn(els){let m=0;els.forEach(({el},i)=>{el.animate([{opacity:0,transform:'translateX(80px)'},{opacity:1,transform:'translateX(0)'}],{duration:350,delay:i*60,easing:SNAP,fill:'both'});m=Math.max(m,i*60+350)});return m},
+  // ── NEW v2 ──
+  spell(els,fw,spd=1){
+    const ms=Math.round(60/spd);const al=[];
+    els.forEach(({el})=>{el.style.opacity='1';const t=el.textContent;el.textContent='';
+      [...t].forEach(ch=>{const l=document.createElement('span');l.style.cssText='display:inline-block;opacity:0;';if(el.style.color)l.style.color=el.style.color;l.textContent=ch;el.appendChild(l);al.push(l)});
+      const s=document.createElement('span');s.style.cssText='display:inline-block;width:.28em;opacity:1;';el.appendChild(s)});
+    al.forEach((l,i)=>l.animate([{opacity:0,transform:'scale(0.5)',filter:'blur(3px)'},{opacity:1,transform:'scale(1.08)',filter:'blur(0)'},{opacity:1,transform:'scale(1)',filter:'blur(0)'}],{duration:Math.round(120/spd),delay:i*ms,easing:SNAP,fill:'both'}));
+    return al.length*ms+Math.round(120/spd)},
+  fadeUp(els){let m=0;els.forEach(({el},i)=>{el.animate([{opacity:0,transform:'translateY(30px)',filter:'blur(2px)'},{opacity:1,transform:'translateY(0)',filter:'blur(0)'}],{duration:400,delay:i*90,easing:SILK,fill:'both'});m=Math.max(m,i*90+400)});return m},
+  fall(els){let m=0;els.forEach(({el},i)=>{el.animate([{opacity:0,transform:'translateY(-120px) rotate(-8deg)',filter:'blur(3px)'},{opacity:1,transform:'translateY(6px) rotate(1deg)',filter:'blur(0)'},{opacity:1,transform:'translateY(-2px) rotate(0deg)'},{opacity:1,transform:'translateY(0) rotate(0deg)'}],{duration:550,delay:i*110,easing:'cubic-bezier(0.34,1.56,0.64,1)',fill:'both'});m=Math.max(m,i*110+550)});return m},
+  matrix(els){
+    const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*';const dur=500;
+    els.forEach(({el},i)=>{el.style.opacity='1';const orig=el.textContent;const letters=[...orig];
+      let fr=0;const iv=setInterval(()=>{el.textContent=letters.map((c,ci)=>fr>ci*2?c:chars[Math.floor(Math.random()*chars.length)]).join('');fr++;if(fr>letters.length*3)clearInterval(iv)},50);
+      el.animate([{opacity:0,filter:'blur(4px)',transform:'scale(1.1)'},{opacity:1,filter:'blur(0)',transform:'scale(1)'}],{duration:dur,delay:i*80,easing:SNAP,fill:'both'})});
+    return els.length*80+dur},
+  typebeat(els){let m=0;const groups=[];for(let i=0;i<els.length;i+=2){groups.push(els.slice(i,i+2))}
+    groups.forEach((grp,gi)=>{const d=gi*200;grp.forEach(({el},wi)=>{el.animate([{opacity:0,transform:'scale(0.8) translateY(8px)'},{opacity:1,transform:'scale(1.04) translateY(-2px)'},{opacity:1,transform:'scale(1) translateY(0)'}],{duration:250,delay:d+wi*50,easing:SNAP,fill:'both'});m=Math.max(m,d+wi*50+250)})});return m},
 };
 
 // ═══════════════════════════════════════════════════════
@@ -379,7 +438,7 @@ function makeWord(tok,fw,sc){
   const el=document.createElement('span');
   el.className='w'+(tok.pill?' pill':'');
   let css=`font-size:${fs}px;font-weight:${fw};opacity:0;`;
-  if(tok.color&&COLORS[tok.color]) css+=`color:${COLORS[tok.color]};`;
+  if(tok.color){const c=tok.color.startsWith('#')?tok.color:COLORS[tok.color];if(c)css+=`color:${c};`;}
   if(sc.transform&&sc.transform!=='none') css+=`text-transform:${sc.transform};`;
   if(sc.spacing&&SPACING_MAP[sc.spacing]) css+=`letter-spacing:${SPACING_MAP[sc.spacing]};`;
   el.style.cssText=css;
@@ -398,7 +457,9 @@ function buildCentered(toks,sc){
 
 function buildSplit(toks,sc){
   const si=toks.findIndex(t=>t.isSplit);
-  const left=si>=0?toks.slice(0,si):[],right=si>=0?toks.slice(si+1):[];
+  let left,right;
+  if(si>=0){left=toks.slice(0,si);right=toks.slice(si+1)}
+  else{const mid=Math.ceil(toks.length/2);left=toks.slice(0,mid);right=toks.slice(mid)}
   const outer=document.createElement('div');
   outer.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 8%;z-index:2;';
   const lDiv=document.createElement('div');lDiv.style.cssText='display:flex;flex-wrap:wrap;gap:.2em .3em;';
@@ -417,7 +478,34 @@ function drawStatic(i){
   ctr.textContent=`${i+1} / ${scenes.length}`;prog.style.width='0%';
 }
 
-function animIn(els,sc,done){const s=spv();const fn=ENTER[sc.enter]||ENTER.gentle;const ms=fn(els,sc.fw);timers.push(setTimeout(done,Math.round(ms/s)))}
+// Preview: play entrance animation without advancing
+function previewEnter(i){
+  if(playing)return;clearStage();const sc=scenes[i];applyBg(sc.bg||'');
+  const toks=tokenize(sc.text);
+  const els=sc.split?buildSplit(toks,sc):buildCentered(toks,sc);
+  ctr.textContent=`${i+1} / ${scenes.length}`;
+  animIn(els,sc,()=>{});
+}
+// Preview: show text instantly then play exit animation
+function previewExit(i){
+  if(playing)return;clearStage();const sc=scenes[i];applyBg(sc.bg||'');
+  const toks=tokenize(sc.text);
+  const els=sc.split?buildSplit(toks,sc):buildCentered(toks,sc);
+  els.forEach(({el})=>{el.style.opacity='1';el.style.transform='none';el.style.filter='none'});
+  ctr.textContent=`${i+1} / ${scenes.length}`;
+  timers.push(setTimeout(()=>animOut(els,sc,()=>{}),400));
+}
+// Preview: show text instantly then start hold animation
+function previewHold(i){
+  if(playing)return;clearStage();const sc=scenes[i];applyBg(sc.bg||'');
+  const toks=tokenize(sc.text);
+  const els=sc.split?buildSplit(toks,sc):buildCentered(toks,sc);
+  els.forEach(({el})=>{el.style.opacity='1';el.style.transform='none';el.style.filter='none'});
+  ctr.textContent=`${i+1} / ${scenes.length}`;
+  const holdFn=HOLD[sc.hold_anim||'none']||HOLD.none;holdFn(els,5000);
+}
+
+function animIn(els,sc,done){const s=spv();const fn=ENTER[sc.enter]||ENTER.gentle;const spd=sc.enterSpeed||1;const ms=fn(els,sc.fw,spd);timers.push(setTimeout(done,Math.round(ms/s)))}
 function animOut(els,sc,done){
   const s=spv();const fn=EXIT[sc.exit]||EXIT.fade;
   let targets=sc.exitPartial!=null?els.slice(0,sc.exitPartial).map(e=>e.el):els.map(e=>e.el);
@@ -450,7 +538,7 @@ function renderTL(){const tl=document.getElementById('tl');tl.innerHTML='';scene
 // ═══════════════════════════════════════════════════════
 //  SIDEBAR  —  collapsible cards, full options
 // ═══════════════════════════════════════════════════════
-const ENTERS=['gentle','together','typewriter','assemble','rise','zoom','flip','wave','elastic','blur','cascade','slam','glitch','spiral','cut','bounce','reveal','swing','drop','expand','slideIn'];
+const ENTERS=['gentle','together','typewriter','assemble','rise','zoom','flip','wave','elastic','blur','cascade','slam','glitch','spiral','cut','bounce','reveal','swing','drop','expand','slideIn','spell','fadeUp','fall','matrix','typebeat'];
 const EXITS=['fade','lift','sink','scatter','blurout','zoom','collapse','slide','flip','glitch','cut','pop','shrink','sweep','dropOut'];
 const HOLDS=['none','float','breathe','wave','pulse','sway','jitter','glow','rotate','bounce'];
 const WEIGHTS=['300','400','500','700','800','900'];
@@ -459,6 +547,61 @@ const SPACINGS=[{k:'tight',l:'Tett'},{k:'normal',l:'Normal'},{k:'wide',l:'Vid'},
 
 const openSecs=new Set(['tekst']); // which sections are expanded; 'tekst' open by default
 function toggleSec(key){if(openSecs.has(key))openSecs.delete(key);else openSecs.add(key);renderSB()}
+
+let selChipIdx=-1; // selected word chip index for color picker
+
+function setWordColor(sceneIdx,wordIdx,color){
+  const sc=scenes[sceneIdx];
+  const raw=sc.text;
+  // Parse words from raw text, preserving positions
+  const re=/\[([^\]]+)\]|(\|)|(\S+)/g;
+  let m,words=[];
+  while((m=re.exec(raw))!==null){
+    if(m[1]!=null){
+      // Pill: expand to individual words inside brackets
+      const inner=m[1].trim().split(/\s+/);
+      inner.forEach(w=>words.push({start:m.index,end:m.index+m[0].length,full:m[0],isPill:true,word:w}));
+    } else if(m[2]!=null){/* skip split */}
+    else{words.push({start:m.index,end:m.index+m[0].length,full:m[0],isPill:false,word:m[3]})}
+  }
+  if(wordIdx<0||wordIdx>=words.length)return;
+  const w=words[wordIdx];
+  if(w.isPill)return; // skip pills for now - complex to edit
+
+  // Build new word token
+  const base=w.word.split('~')[0]; // remove existing color
+  const newWord=color?base+'~'+color:base;
+  const newText=raw.substring(0,w.start)+newWord+raw.substring(w.end);
+  scenes[sceneIdx].text=newText;
+  if(!playing)drawStatic(sceneIdx);
+  renderSB();
+}
+
+function buildWordChips(sceneIdx,sc){
+  const toks=tokenize(sc.text);
+  const nonSplit=toks.filter(t=>!t.isSplit);
+  let html='<div class="word-chips">';
+  nonSplit.forEach((tok,ti)=>{
+    const c=tok.color?(tok.color.startsWith('#')?tok.color:COLORS[tok.color]||null):null;
+    const dotStyle=c?`background:${c}`:'background:transparent;border-color:var(--um)';
+    const sel=ti===selChipIdx?' chip-sel':'';
+    html+=`<button class="word-chip${sel}" onclick="selChipIdx=${ti===selChipIdx?-1:ti};renderSB()"><span class="chip-dot" style="${dotStyle}"></span>${tok.text}</button>`;
+  });
+  html+='</div>';
+  // Color picker row (only if a chip is selected)
+  if(selChipIdx>=0&&selChipIdx<nonSplit.length){
+    const cur=nonSplit[selChipIdx].color||'';
+    html+='<div class="color-pick-row">';
+    Object.entries(COLORS).forEach(([name,hex])=>{
+      const sel=cur===name?' s':'';
+      html+=`<div class="cpick${sel}" style="background:${hex}" title="${name}" onclick="setWordColor(${sceneIdx},${selChipIdx},'${name}')"></div>`;
+    });
+    html+=`<input type="color" class="cpick-custom" value="${cur.startsWith('#')?cur:'#ff6600'}" title="Egendefinert" onchange="setWordColor(${sceneIdx},${selChipIdx},this.value)">`;
+    html+=`<button class="cpick-x" onclick="setWordColor(${sceneIdx},${selChipIdx},null)">Fjern</button>`;
+    html+='</div>';
+  }
+  return html;
+}
 
 function renderSB(){
   const list=document.getElementById('list');list.innerHTML='';
@@ -485,23 +628,31 @@ function renderSB(){
         <div class="sec${o('tekst')}">
           <div class="sec-title" onclick="toggleSec('tekst')">Tekst</div>
           <div class="sec-body">
-            <textarea style="width:100%;min-height:56px;background:var(--ui);border:1px solid var(--ub);border-radius:6px;color:var(--ink);font-family:inherit;font-size:12px;padding:6px 8px;outline:none;resize:vertical;line-height:1.5" oninput="upd(${i},'text',this.value)">${sc.text}</textarea>
+            <textarea style="width:100%;min-height:56px;background:var(--ui);border:1px solid var(--ub);border-radius:6px;color:var(--ink);font-family:inherit;font-size:12px;padding:6px 8px;outline:none;resize:vertical;line-height:1.5" oninput="selChipIdx=-1;upd(${i},'text',this.value)">${sc.text}</textarea>
+            ${buildWordChips(i,sc)}
           </div>
         </div>
 
         <div class="sec${o('enter')}">
           <div class="sec-title" onclick="toggleSec('enter')">Entrance-animasjon</div>
-          <div class="sec-body"><div class="pr">${ENTERS.map(e=>`<button class="ap${sc.enter===e?' s':''}" onclick="upd(${i},'enter','${e}');renderSB()">${e}</button>`).join('')}</div></div>
+          <div class="sec-body"><div class="pr">${ENTERS.map(e=>`<button class="ap${sc.enter===e?' s':''}" onclick="upd(${i},'enter','${e}');renderSB();previewEnter(${i})">${e}</button>`).join('')}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+              <span style="font-size:9px;color:var(--um);white-space:nowrap">Hastighet</span>
+              <input type="range" min="0.3" max="3" step="0.1" value="${sc.enterSpeed||1}" style="flex:1;accent-color:var(--ink)"
+                oninput="upd(${i},'enterSpeed',parseFloat(this.value));this.nextElementSibling.textContent=this.value+'x'"
+                onchange="previewEnter(${i})">
+              <span class="rv">${sc.enterSpeed||1}x</span>
+            </div></div>
         </div>
 
         <div class="sec${o('exit')}">
           <div class="sec-title" onclick="toggleSec('exit')">Exit-animasjon</div>
-          <div class="sec-body"><div class="pr">${EXITS.map(e=>`<button class="ap${sc.exit===e?' s':''}" onclick="upd(${i},'exit','${e}');renderSB()">${e}</button>`).join('')}</div></div>
+          <div class="sec-body"><div class="pr">${EXITS.map(e=>`<button class="ap${sc.exit===e?' s':''}" onclick="upd(${i},'exit','${e}');renderSB();previewExit(${i})">${e}</button>`).join('')}</div></div>
         </div>
 
         <div class="sec${o('hold')}">
           <div class="sec-title" onclick="toggleSec('hold')">Hold-animasjon</div>
-          <div class="sec-body"><div class="pr">${HOLDS.map(h=>`<button class="ap${(sc.hold_anim||'none')===h?' s':''}" onclick="upd(${i},'hold_anim','${h}');renderSB()">${h}</button>`).join('')}</div></div>
+          <div class="sec-body"><div class="pr">${HOLDS.map(h=>`<button class="ap${(sc.hold_anim||'none')===h?' s':''}" onclick="upd(${i},'hold_anim','${h}');renderSB();previewHold(${i})">${h}</button>`).join('')}</div></div>
         </div>
 
         <div class="sec${o('fw')}">
@@ -524,7 +675,7 @@ function renderSB(){
           <div class="sec-body"><div class="pr">
             <button class="ap${!sc.split?' s':''}" onclick="upd(${i},'split',false);renderSB()">Sentrert</button>
             <button class="ap${sc.split?' s':''}" onclick="upd(${i},'split',true);renderSB()">Split |</button>
-          </div></div>
+          </div>${sc.split?'<div style="font-size:9px;color:var(--um);margin-top:5px">Bruk <code style=\\"background:var(--ub);padding:0 3px;border-radius:3px;font-size:8.5px\\">|</code> i teksten for å styre delingspunktet</div>':''}</div>
         </div>
 
         <div class="sec${o('bg')}">
@@ -560,7 +711,7 @@ function renderSB(){
 function upd(i,k,v){scenes[i][k]=v;if(!playing)drawStatic(i)}
 function selectScene(i){stopAll();curI=i;renderSB();drawStatic(i)}
 function addScene(){
-  scenes.push({text:'Din tekst her',enter:'gentle',exit:'fade',hold_anim:'none',fw:'400',hold:2.0,bg:'',transform:'none',spacing:'normal'});
+  scenes.push({text:'Din tekst her',enter:'gentle',exit:'fade',hold_anim:'none',fw:'400',hold:2.0,bg:'',transform:'none',spacing:'normal',enterSpeed:1});
   selectScene(scenes.length-1);
 }
 function delScene(i){
@@ -575,6 +726,171 @@ function calcTime(){
 
 window.addEventListener('resize',()=>{if(!playing)drawStatic(curI)});
 renderSB();setTimeout(()=>drawStatic(0),60);
+
+// ═══════════════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════════════
+let exportMode='webm'; // 'mp4', 'webm', 'alpha'
+
+function showExportModal(){
+  if(document.querySelector('.export-overlay'))return;
+  const ov=document.createElement('div');ov.className='export-overlay';
+  ov.innerHTML=`<div class="export-modal">
+    <h3>Eksporter video</h3>
+    <div class="export-opts">
+      <div class="export-opt${exportMode==='mp4'?' active':''}" onclick="setExportMode('mp4',this)">
+        <div class="export-opt-icon">🎬</div>
+        <div class="export-opt-info"><div class="export-opt-title">MP4 Video (1080p 25fps)</div><div class="export-opt-desc">H.264 — universell kompatibilitet, med bakgrunn</div></div>
+      </div>
+      <div class="export-opt${exportMode==='webm'?' active':''}" onclick="setExportMode('webm',this)">
+        <div class="export-opt-icon">🎥</div>
+        <div class="export-opt-info"><div class="export-opt-title">WebM Video (1080p 25fps)</div><div class="export-opt-desc">VP9 — høy kvalitet, med bakgrunn</div></div>
+      </div>
+      <div class="export-opt${exportMode==='alpha'?' active':''}" onclick="setExportMode('alpha',this)">
+        <div class="export-opt-icon">🔲</div>
+        <div class="export-opt-info"><div class="export-opt-title">WebM Alpha-kanal</div><div class="export-opt-desc">VP9 — gjennomsiktig bakgrunn for compositing</div></div>
+      </div>
+    </div>
+    <div class="export-progress" style="display:none">
+      <div class="export-progress-bar"><div class="export-progress-fill" id="exp-fill"></div></div>
+      <div class="export-status" id="exp-status">Forbereder...</div>
+    </div>
+    <div class="export-btns">
+      <button onclick="closeExportModal()">Avbryt</button>
+      <button class="export-go" id="exp-go" onclick="startExport()">Eksporter</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{if(e.target===ov)closeExportModal()});
+}
+
+function setExportMode(mode,el){
+  exportMode=mode;
+  document.querySelectorAll('.export-opt').forEach(o=>o.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function closeExportModal(){
+  const ov=document.querySelector('.export-overlay');
+  if(ov)ov.remove();
+}
+
+async function startExport(){
+  const goBtn=document.getElementById('exp-go');
+  goBtn.disabled=true;goBtn.textContent='Eksporterer...';
+  const progDiv=document.querySelector('.export-progress');progDiv.style.display='block';
+  const fill=document.getElementById('exp-fill');
+  const status=document.getElementById('exp-status');
+
+  const isAlpha=exportMode==='alpha';
+  const W=1920,H=1080;
+
+  // Create offscreen canvas
+  const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+
+  // Determine mime type
+  let mimeType='video/webm;codecs=vp9';
+  if(exportMode==='mp4'){
+    if(MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')){mimeType='video/mp4;codecs=avc1'}
+    else if(MediaRecorder.isTypeSupported('video/mp4')){mimeType='video/mp4'}
+    else{mimeType='video/webm;codecs=vp9'} // fallback
+  }
+
+  const stream=canvas.captureStream(25);
+  const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:8000000});
+  const chunks=[];
+  recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data)};
+
+  // Save original stage styles
+  const origBg=stage.style.background;
+  const origBR=document.querySelector('.film').style.borderRadius;
+
+  recorder.start();
+
+  // Play through all scenes and capture frames
+  const totalScenes=scenes.length;
+  const savedI=curI;
+  const idleEl=document.getElementById('idle');idleEl.classList.add('gone');
+
+  for(let si=0;si<totalScenes;si++){
+    curI=si;
+    status.textContent=`Scene ${si+1} / ${totalScenes}`;
+    fill.style.width=`${((si)/totalScenes)*100}%`;
+
+    clearStage();
+    const sc=scenes[si];
+    applyBg(sc.bg||'');
+    if(isAlpha){stage.style.background='transparent';document.querySelector('.film').style.background='transparent'}
+
+    const toks=tokenize(sc.text);
+    const els=sc.split?buildSplit(toks,sc):buildCentered(toks,sc);
+
+    // Animate entrance
+    await new Promise(resolve=>{
+      const fn=ENTER[sc.enter]||ENTER.gentle;
+      const spd=sc.enterSpeed||1;
+      const ms=fn(els,sc.fw,spd);
+      // Capture frames during entrance
+      const frameIv=setInterval(()=>captureFrame(ctx,W,H,isAlpha),40);
+      setTimeout(()=>{clearInterval(frameIv);captureFrame(ctx,W,H,isAlpha);resolve()},ms);
+    });
+
+    // Hold phase: capture frames
+    const holdMs=sc.hold*1000;
+    const holdFn=HOLD[sc.hold_anim||'none']||HOLD.none;
+    holdFn(els,holdMs);
+    await new Promise(resolve=>{
+      const frameIv=setInterval(()=>captureFrame(ctx,W,H,isAlpha),40);
+      setTimeout(()=>{clearInterval(frameIv);stopHold();resolve()},holdMs);
+    });
+
+    // Exit animation
+    await new Promise(resolve=>{
+      const fn=EXIT[sc.exit]||EXIT.fade;
+      const targets=els.map(e=>e.el);
+      const ms=fn(targets);
+      const frameIv=setInterval(()=>captureFrame(ctx,W,H,isAlpha),40);
+      setTimeout(()=>{clearInterval(frameIv);captureFrame(ctx,W,H,isAlpha);resolve()},ms);
+    });
+
+    fill.style.width=`${((si+1)/totalScenes)*100}%`;
+  }
+
+  // Stop recording
+  recorder.stop();
+  await new Promise(resolve=>{recorder.onstop=resolve});
+
+  // Restore
+  stage.style.background=origBg;
+  document.querySelector('.film').style.background='';
+  curI=savedI;drawStatic(savedI);renderSB();
+
+  // Download
+  const ext=mimeType.startsWith('video/mp4')?'mp4':'webm';
+  const blob=new Blob(chunks,{type:mimeType});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`kinetic-film${isAlpha?'-alpha':''}.${ext}`;
+  a.click();URL.revokeObjectURL(url);
+
+  status.textContent='Ferdig! Filen er lastet ned.';
+  goBtn.textContent='Ferdig';
+  setTimeout(closeExportModal,1500);
+}
+
+function captureFrame(ctx,W,H,isAlpha){
+  const filmEl=document.querySelector('.film');
+  html2canvas(filmEl,{
+    backgroundColor:isAlpha?null:undefined,
+    scale:W/filmEl.offsetWidth,
+    useCORS:true,
+    logging:false
+  }).then(c=>{
+    ctx.clearRect(0,0,W,H);
+    ctx.drawImage(c,0,0,W,H);
+  });
+}
 </script>
 </body>
 </html>
