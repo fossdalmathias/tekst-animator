@@ -881,6 +881,9 @@ async function captureFrame(ctx,W,H,isAlpha){
   ctx.drawImage(c,0,0,W,H);
 }
 
+// Convert canvas to compressed blob for frame storage
+function canvasBlob(c,alpha){return new Promise(r=>c.toBlob(r,alpha?'image/png':'image/jpeg',0.95))}
+
 async function startExport(){
   const goBtn=document.getElementById('exp-go');
   goBtn.disabled=true;goBtn.textContent='Eksporterer...';
@@ -894,37 +897,23 @@ async function startExport(){
   const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext('2d');
 
-  // Determine mime type
-  let mimeType='video/webm;codecs=vp9';
-  if(exportMode==='mp4'){
-    if(MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')){mimeType='video/mp4;codecs=avc1'}
-    else if(MediaRecorder.isTypeSupported('video/mp4')){mimeType='video/mp4'}
-    else{mimeType='video/webm;codecs=vp9'}
-  }
-
-  const stream=canvas.captureStream(25);
-  const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:25000000}); // 25Mbps for high quality
-  const chunks=[];
-  recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data)};
-
   const savedI=curI;
   const idleEl=document.getElementById('idle');idleEl.classList.add('gone');
-  // Hide UI elements that should not appear in export
   prog.style.display='none';
   ctr.style.display='none';
 
-  // Determine scene range
   const startScene=exportScope==='current'?curI:0;
   const endScene=exportScope==='current'?curI+1:scenes.length;
   const totalScenes=endScene-startScene;
 
-  recorder.start(100); // collect data every 100ms
+  // ═══ PHASE 1: Capture all frames as compressed blobs ═══
+  const allFrames=[];
 
   for(let si=startScene;si<endScene;si++){
     curI=si;
     const scIdx=si-startScene;
-    status.textContent=`Scene ${scIdx+1} / ${totalScenes}`;
-    fill.style.width=`${(scIdx/totalScenes)*100}%`;
+    status.textContent=`Fanger opp scene ${scIdx+1} / ${totalScenes}...`;
+    fill.style.width=`${(scIdx/totalScenes)*50}%`; // 0-50% for capture phase
 
     clearStage();
     const sc=scenes[si];
@@ -947,6 +936,7 @@ async function startExport(){
       enterAnims.forEach(a=>{try{a.currentTime=t}catch(e){}});
       commitAnimStyles();
       await captureFrame(ctx,W,H,isAlpha);
+      allFrames.push(await canvasBlob(canvas,isAlpha));
     }
     commitAnimStyles();
     enterAnims.forEach(a=>{try{a.cancel()}catch(e){}});
@@ -965,6 +955,7 @@ async function startExport(){
       hAnims.forEach(a=>{try{a.currentTime=t}catch(e){}});
       commitAnimStyles();
       await captureFrame(ctx,W,H,isAlpha);
+      allFrames.push(await canvasBlob(canvas,isAlpha));
     }
     commitAnimStyles();
     hAnims.forEach(a=>{try{a.cancel()}catch(e){}});
@@ -984,15 +975,56 @@ async function startExport(){
       exitAnims.forEach(a=>{try{a.currentTime=t}catch(e){}});
       commitAnimStyles();
       await captureFrame(ctx,W,H,isAlpha);
+      allFrames.push(await canvasBlob(canvas,isAlpha));
     }
     commitAnimStyles();
     exitAnims.forEach(a=>{try{a.cancel()}catch(e){}});
-
-    fill.style.width=`${((scIdx+1)/totalScenes)*100}%`;
   }
 
-  recorder.stop();
-  await new Promise(resolve=>{recorder.onstop=resolve});
+  // ═══ PHASE 2: Encode with VideoEncoder + Muxer (exact timestamps) ═══
+  status.textContent=`Enkoder ${allFrames.length} bilder til video...`;
+
+  const isMP4=exportMode==='mp4';
+  const ext=isMP4?'mp4':'webm';
+  const MuxLib=await import(isMP4
+    ?'https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.mjs'
+    :'https://cdn.jsdelivr.net/npm/webm-muxer@5/build/webm-muxer.mjs');
+  const target=new MuxLib.ArrayBufferTarget();
+  const muxerOpts={target,video:{codec:isMP4?'avc':'V_VP9',width:W,height:H}};
+  if(isMP4) muxerOpts.fastStart='in-memory';
+  const muxer=new MuxLib.Muxer(muxerOpts);
+
+  const encoder=new VideoEncoder({
+    output:(chunk,meta)=>muxer.addVideoChunk(chunk,meta),
+    error:e=>console.error('VideoEncoder error:',e)
+  });
+  encoder.configure({
+    codec:isMP4?'avc1.640028':'vp09.00.10.08',
+    width:W,height:H,
+    bitrate:25_000_000,
+    framerate:25
+  });
+
+  for(let i=0;i<allFrames.length;i++){
+    const bmp=await createImageBitmap(allFrames[i]);
+    ctx.drawImage(bmp,0,0,W,H);
+    bmp.close();
+    const vf=new VideoFrame(canvas,{timestamp:i*40_000}); // µs, exact 25fps
+    encoder.encode(vf,{keyFrame:i%25===0});
+    vf.close();
+    if(i%10===0){
+      fill.style.width=`${50+(i/allFrames.length)*50}%`;
+      status.textContent=`Enkoder frame ${i+1} / ${allFrames.length}`;
+      await new Promise(r=>setTimeout(r,0)); // yield to UI
+    }
+  }
+
+  await encoder.flush();
+  encoder.close();
+  muxer.finalize();
+
+  // Free captured blobs
+  allFrames.length=0;
 
   // Restore state
   stage.style.background='';
@@ -1002,9 +1034,12 @@ async function startExport(){
   curI=savedI;drawStatic(savedI);renderSB();
 
   // Build file
-  const ext=mimeType.startsWith('video/mp4')?'mp4':'webm';
-  const blob=new Blob(chunks,{type:mimeType});
+  const mimeType=isMP4?'video/mp4':'video/webm';
+  const blob=new Blob([target.buffer],{type:mimeType});
   const fname=`kinetic-film${isAlpha?'-alpha':''}${exportScope==='current'?'-scene'+(curI+1):''}.${ext}`;
+
+  fill.style.width='100%';
+  status.textContent='Lagrer...';
 
   // Try native save dialog, fallback to direct download
   try{
